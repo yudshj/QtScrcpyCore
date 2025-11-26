@@ -809,6 +809,9 @@ void InputConvertGame::timerEvent(QTimerEvent *event)
 {
     if (m_ctrlMouseMove.timer == event->timerId()) {
         stopMouseMoveTimer();
-        mouseMoveStopTouch();
+        // Don't auto-reset view when smallEyes mode is active
+        if (!m_ctrlMouseMove.smallEyes) {
+            mouseMoveStopTouch();
+        }
     }
 }
