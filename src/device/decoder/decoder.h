@@ -19,6 +19,7 @@ public:
 
     bool open();
     void close();
+    void setRenderExpiredFrames(bool renderExpiredFrames);
     bool push(const AVPacket *packet);
     void peekFrame(std::function<void(int width, int height, uint8_t* dataRGB32)> onFrame);
 

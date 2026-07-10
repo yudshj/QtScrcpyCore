@@ -49,13 +49,19 @@ void Controller::test(QRect rc)
 void Controller::updateScript(QString gameScript)
 {
     if (m_inputConvert) {
-        m_inputConvert->releaseAllTouches();
+        releaseAllTouches();
         delete m_inputConvert;
     }
     if (!gameScript.isEmpty()) {
         InputConvertGame *convertgame = new InputConvertGame(this);
-        convertgame->loadKeyMap(gameScript);
-        m_inputConvert = convertgame;
+        QString errorMessage;
+        if (convertgame->loadKeyMap(gameScript, &errorMessage)) {
+            m_inputConvert = convertgame;
+        } else {
+            qWarning() << "Invalid keymap script, using normal input mode:" << errorMessage;
+            delete convertgame;
+            m_inputConvert = new InputConvertNormal(this);
+        }
     } else {
         m_inputConvert = new InputConvertNormal(this);
     }
@@ -229,6 +235,7 @@ void Controller::releaseAllTouches()
 {
     if (m_inputConvert) {
         m_inputConvert->releaseAllTouches();
+        QCoreApplication::sendPostedEvents(this, ControlMsg::Control);
     }
 }
 

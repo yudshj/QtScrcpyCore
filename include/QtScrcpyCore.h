@@ -1,4 +1,5 @@
 #pragma once
+#include <QImage>
 #include <QPointer>
 #include <QMouseEvent>
 
@@ -44,6 +45,7 @@ public:
         Q_UNUSED(frameSize);
         Q_UNUSED(showSize);
     }
+    virtual void releaseAllTouches() {}
 
     virtual void postGoBack() {}
     virtual void postGoHome() {}
@@ -96,7 +98,7 @@ public:
     virtual void mouseEvent(const QMouseEvent *from, const QSize &frameSize, const QSize &showSize) = 0;
     virtual void wheelEvent(const QWheelEvent *from, const QSize &frameSize, const QSize &showSize) = 0;
     virtual void keyEvent(const QKeyEvent *from, const QSize &frameSize, const QSize &showSize) = 0;
-    virtual void releaseAllTouches() = 0;
+    virtual void releaseAllTouches() {}
 
     virtual void postGoBack() = 0;
     virtual void postGoHome() = 0;
@@ -119,6 +121,7 @@ public:
     virtual void installApkRequest(const QString &apkFile) = 0;
 
     virtual void screenshot() = 0;
+    virtual QImage currentFrame() { return QImage(); }
     virtual void showTouch(bool show) = 0;
 
     virtual bool isReversePort(quint16 port) = 0;

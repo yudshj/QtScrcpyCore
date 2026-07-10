@@ -55,7 +55,7 @@ void InputConvertNormal::mouseEvent(const QMouseEvent *from, const QSize &frameS
         convertMouseButton(from->button()),
         convertMouseButtons(from->buttons()),
         QRect(pos.toPoint(), frameSize),
-        AMOTION_EVENT_ACTION_DOWN == action ? 1.0f : 0.0f);
+        AMOTION_EVENT_ACTION_UP == action ? 0.0f : 1.0f);
     sendControlMsg(controlMsg);
 }
 

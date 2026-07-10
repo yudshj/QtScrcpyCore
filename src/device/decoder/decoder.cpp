@@ -57,6 +57,13 @@ void Decoder::close()
     avcodec_free_context(&m_codecCtx);
 }
 
+void Decoder::setRenderExpiredFrames(bool renderExpiredFrames)
+{
+    if (m_vb) {
+        m_vb->setRenderExpiredFrames(renderExpiredFrames);
+    }
+}
+
 bool Decoder::push(const AVPacket *packet)
 {
     if (!m_codecCtx || !m_vb) {

@@ -1,6 +1,7 @@
 #ifndef INPUTCONVERTGAME_H
 #define INPUTCONVERTGAME_H
 
+#include <QHash>
 #include <QPointF>
 #include <QQueue>
 
@@ -21,7 +22,7 @@ public:
     void releaseAllTouches() override;
     bool isCurrentCustomKeymap() override;
 
-    void loadKeyMap(const QString &json);
+    bool loadKeyMap(const QString &json, QString *errorMessage = Q_NULLPTR);
 
 protected:
     void updateSize(const QSize &frameSize, const QSize &showSize);
@@ -37,6 +38,8 @@ protected:
     int attachTouchID(int key);
     void detachTouchID(int key);
     int getTouchID(int key);
+    void releaseTouchForKey(int key, const QPointF &fallbackPos);
+    bool isAsyncActionCurrent(int key, quint64 sequence, quint64 stateGeneration) const;
 
     // steer wheel
     void processSteerWheel(const KeyMap::KeyMapNode &node, const QKeyEvent *from);
@@ -84,9 +87,17 @@ private:
     bool m_gameMap = false;
     bool m_needBackMouseMove = false;
     int m_multiTouchID[MULTI_TOUCH_MAX_NUM] = { 0 };
+    QPoint m_lastAbsolutePos[MULTI_TOUCH_MAX_NUM];
+    QPointF m_lastTouchPos[MULTI_TOUCH_MAX_NUM];
+    bool m_hasLastAbsolutePos[MULTI_TOUCH_MAX_NUM] = { false };
+    bool m_hasLastTouchPos[MULTI_TOUCH_MAX_NUM] = { false };
     KeyMap m_keyMap;
 
     bool m_processMouseMove = true;
+    bool m_cursorHidden = false;
+    quint64 m_stateGeneration = 0;
+    quint64 m_smallEyesGeneration = 0;
+    QHash<int, quint64> m_clickMultiGeneration;
 
     // steer wheel
     struct

@@ -117,7 +117,7 @@ public:
     KeyMap(QObject *parent = Q_NULLPTR);
     virtual ~KeyMap();
 
-    void loadKeyMap(const QString &json);
+    bool loadKeyMap(const QString &json, QString *errorMessage = Q_NULLPTR);
     const KeyMap::KeyMapNode &getKeyMapNode(int key);
     const KeyMap::KeyMapNode &getKeyMapNodeKey(int key);
     const KeyMap::KeyMapNode &getKeyMapNodeMouse(int key);
@@ -129,6 +129,8 @@ public:
     const KeyMap::KeyMapNode &getMouseMoveMap();
 
 private:
+    void clear();
+
     // set up the reverse map from key/event event to keyMapNode
     void makeReverseMap();
 

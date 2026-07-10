@@ -66,6 +66,7 @@ public:
     void installApkRequest(const QString &apkFile) override;
 
     void screenshot() override;
+    QImage currentFrame() override;
     void showTouch(bool show) override;
 
     bool isReversePort(quint16 port) override;

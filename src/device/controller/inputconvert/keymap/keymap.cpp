@@ -12,8 +12,13 @@ KeyMap::KeyMap(QObject *parent) : QObject(parent) {}
 
 KeyMap::~KeyMap() {}
 
-void KeyMap::loadKeyMap(const QString &json)
+bool KeyMap::loadKeyMap(const QString &json, QString *errorMessage)
 {
+    clear();
+    if (errorMessage) {
+        errorMessage->clear();
+    }
+
     QString errorString;
     QJsonParseError jsonError;
     QJsonDocument jsonDoc;
@@ -78,22 +83,16 @@ void KeyMap::loadKeyMap(const QString &json)
         }
 
         // Sanity check: No ratio must be lower than 0.001
-        if ( ( keyMapNode.data.mouseMove.speedRatio.x() < 0.001f ) || ( keyMapNode.data.mouseMove.speedRatio.x() < 0.001f ) ) {
+        if (keyMapNode.data.mouseMove.speedRatio.x() < 0.001f || keyMapNode.data.mouseMove.speedRatio.y() < 0.001f) {
             errorString = QString("json error: Minimum speedRatio is 0.001");
             goto parseError;
         }
 
-        if (!checkItemObject(mouseMoveMap, "startPos")) {
-            errorString = QString("json error: mouseMoveMap on find startPos");
+        if (!checkItemPos(mouseMoveMap, "startPos")) {
+            errorString = QString("json error: mouseMoveMap startPos is invalid");
             goto parseError;
         }
-        QJsonObject startPos = mouseMoveMap.value("startPos").toObject();
-        if (checkItemDouble(startPos, "x")) {
-            keyMapNode.data.mouseMove.startPos.setX(getItemDouble(startPos, "x"));
-        }
-        if (checkItemDouble(startPos, "y")) {
-            keyMapNode.data.mouseMove.startPos.setY(getItemDouble(startPos, "y"));
-        }
+        keyMapNode.data.mouseMove.startPos = getItemPos(mouseMoveMap, "startPos");
 
         // small eyes
         if (checkItemObject(mouseMoveMap, "smallEyes")) {
@@ -317,12 +316,27 @@ void KeyMap::loadKeyMap(const QString &json)
     // this must be called after m_keyMapNodes is stable
     makeReverseMap();
     qInfo() << "Script updated, current keymap mode:normal, Press ~ key to switch keymap mode";
+    return true;
 
 parseError:
     if (!errorString.isEmpty()) {
         qWarning() << errorString;
     }
-    return;
+    if (errorMessage) {
+        *errorMessage = errorString;
+    }
+    clear();
+    return false;
+}
+
+void KeyMap::clear()
+{
+    m_keyMapNodes.clear();
+    m_rmapKey.clear();
+    m_rmapMouse.clear();
+    m_switchKey = KeyNode(AT_KEY, Qt::Key_QuoteLeft);
+    m_idxSteerWheel = -1;
+    m_idxMouseMove = -1;
 }
 
 const KeyMap::KeyMapNode &KeyMap::getKeyMapNode(int key)
@@ -482,7 +496,12 @@ bool KeyMap::checkItemPos(const QJsonObject &node, const QString &name)
 {
     if (node.contains(name) && node.value(name).isObject()) {
         QJsonObject pos = node.value(name).toObject();
-        return pos.contains("x") && pos.value("x").isDouble() && pos.contains("y") && pos.value("y").isDouble();
+        if (!pos.contains("x") || !pos.value("x").isDouble() || !pos.contains("y") || !pos.value("y").isDouble()) {
+            return false;
+        }
+        const double x = pos.value("x").toDouble();
+        const double y = pos.value("y").toDouble();
+        return x >= 0.0 && x <= 1.0 && y >= 0.0 && y <= 1.0;
     }
     return false;
 }

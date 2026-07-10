@@ -1,5 +1,6 @@
 #include "videobuffer.h"
 #include "avframeconvert.h"
+#include <QMutexLocker>
 extern "C"
 {
 #include "libavformat/avformat.h"
@@ -113,8 +114,11 @@ void VideoBuffer::peekRenderedFrame(std::function<void(int width, int height, ui
         return;
     }
 
-    lock();
+    QMutexLocker locker(&m_mutex);
     auto frame = m_renderingframe;
+    if (!frame || frame->width <= 0 || frame->height <= 0 || !frame->data[0]) {
+        return;
+    }
     int width = frame->width;
     int height = frame->height;
     int linesize = frame->linesize[0];
@@ -138,18 +142,18 @@ void VideoBuffer::peekRenderedFrame(std::function<void(int width, int height, ui
     ret = convert.init();
     if (!ret) {
         delete [] rgbBuffer;
-        av_free(rgbFrame);
+        av_frame_free(&rgbFrame);
         return;
     }
     ret = convert.convert(frame, rgbFrame);
     if (!ret) {
         delete [] rgbBuffer;
-        av_free(rgbFrame);
+        av_frame_free(&rgbFrame);
         return;
     }
     convert.deInit();
-    av_free(rgbFrame);
-    unLock();
+    av_frame_free(&rgbFrame);
+    locker.unlock();
 
     onFrame(width, height, rgbBuffer);
     delete [] rgbBuffer;

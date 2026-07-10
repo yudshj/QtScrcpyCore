@@ -26,6 +26,7 @@ Device::Device(DeviceParams params, QObject *parent) : IDevice(parent), m_params
                 item->onFrame(width, height, dataY, dataU, dataV, linesizeY, linesizeU, linesizeV);
             }
         }, this);
+        m_decoder->setRenderExpiredFrames(m_params.renderExpiredFrames);
         m_fileHandler = new FileHandler(this);
         m_controller = new Controller([this](const QByteArray& buffer) -> qint64 {
             if (!m_server || !m_server->getControlSocket()) {
@@ -109,6 +110,21 @@ void Device::screenshot()
     m_decoder->peekFrame([this](int width, int height, uint8_t* dataRGB32) {
        saveFrame(width, height, dataRGB32);
     });
+}
+
+QImage Device::currentFrame()
+{
+    QImage image;
+    if (!m_decoder) {
+        return image;
+    }
+
+    m_decoder->peekFrame([&image](int width, int height, uint8_t *dataRGB32) {
+        if (dataRGB32 && width > 0 && height > 0) {
+            image = QImage(dataRGB32, width, height, QImage::Format_RGB32).copy();
+        }
+    });
+    return image;
 }
 
 void Device::showTouch(bool show)
@@ -306,6 +322,13 @@ void Device::disconnectDevice()
         return;
     }
     releaseAllTouches();
+    QTcpSocket *controlSocket = m_server->getControlSocket();
+    if (controlSocket && controlSocket->isOpen()) {
+        controlSocket->flush();
+        if (controlSocket->bytesToWrite() > 0) {
+            controlSocket->waitForBytesWritten(50);
+        }
+    }
     m_server->stop();
     m_server = Q_NULLPTR;
 
@@ -600,6 +623,9 @@ void Device::releaseAllTouches()
 {
     if (m_controller) {
         m_controller->releaseAllTouches();
+    }
+    for (const auto &item : m_deviceObservers) {
+        item->releaseAllTouches();
     }
 }
 

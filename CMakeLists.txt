@@ -162,6 +162,36 @@ target_include_directories(${QSC_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DI
 target_include_directories(${QSC_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/device/recorder)
 target_include_directories(${QSC_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/devicemanage)
 
+if(BUILD_TESTING)
+    add_executable(QtScrcpyCoreKeyMapTests
+        tests/keymap_tests.cpp
+        src/device/controller/inputconvert/keymap/keymap.cpp
+        src/device/controller/inputconvert/keymap/keymap.h
+    )
+    target_include_directories(QtScrcpyCoreKeyMapTests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/android
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/controller/inputconvert/keymap
+    )
+    target_link_libraries(QtScrcpyCoreKeyMapTests PRIVATE Qt${QT_DESIRED_VERSION}::Widgets)
+    add_test(NAME QtScrcpyCore.KeyMap COMMAND QtScrcpyCoreKeyMapTests)
+
+    add_executable(QtScrcpyCoreInputTests tests/inputconvertgame_tests.cpp)
+    target_include_directories(QtScrcpyCoreInputTests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/common
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/android
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/controller
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/controller/inputconvert
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/controller/inputconvert/keymap
+    )
+    target_link_libraries(QtScrcpyCoreInputTests PRIVATE QtScrcpyCore Qt${QT_DESIRED_VERSION}::Widgets)
+    add_test(NAME QtScrcpyCore.Input COMMAND QtScrcpyCoreInputTests)
+    set(QSC_TEST_ENV "QT_QPA_PLATFORM=offscreen")
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        list(APPEND QSC_TEST_ENV "DYLD_LIBRARY_PATH=${CMAKE_CURRENT_SOURCE_DIR}/src/third_party/ffmpeg/lib/${QSC_CPU_ARCH}")
+    endif()
+    set_tests_properties(QtScrcpyCore.KeyMap QtScrcpyCore.Input PROPERTIES ENVIRONMENT "${QSC_TEST_ENV}")
+endif()
+
 #
 # plantform deps
 #
