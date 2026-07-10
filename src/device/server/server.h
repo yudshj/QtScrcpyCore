@@ -33,8 +33,8 @@ public:
         // optional
         QString serverRemotePath = "/data/local/tmp/scrcpy-server.jar";    // 要推送到远端设备的server路径
         quint16 localPort = 27183;     // reverse时本地监听端口
-        quint16 maxSize = 720;         // 视频分辨率
-        quint32 bitRate = 8000000;     // 视频比特率
+        quint16 maxSize = 0;           // 视频分辨率，0为设备原生分辨率
+        quint32 bitRate = 12000000;    // 视频比特率
         quint32 maxFps = 0;            // 视频最大帧率
         bool useReverse = true;        // true:先使用adb reverse，失败后自动使用adb forward；false:直接使用adb forward
         int captureOrientationLock = 0; // 是否锁定采集方向 0不锁定 1锁定指定方向 2锁定原始方向
