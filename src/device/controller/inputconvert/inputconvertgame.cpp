@@ -8,6 +8,24 @@
 #include "inputconvertgame.h"
 
 #define CURSOR_POS_CHECK 50
+#define MACOS_BACKTICK_NATIVE_VKEY 50
+
+static bool keyMatchesSwitch(const QKeyEvent *event, int switchKey)
+{
+    if (!event) {
+        return false;
+    }
+    if (event->key() == switchKey) {
+        return true;
+    }
+    if (switchKey == Qt::Key_QuoteLeft) {
+        return event->key() == Qt::Key_AsciiTilde
+            || event->nativeVirtualKey() == MACOS_BACKTICK_NATIVE_VKEY
+            || event->text() == "`"
+            || event->text() == "~";
+    }
+    return false;
+}
 
 InputConvertGame::InputConvertGame(Controller *controller) : InputConvertNormal(controller) {
     m_ctrlSteerWheel.delayData.timer = new QTimer(this);
@@ -15,7 +33,10 @@ InputConvertGame::InputConvertGame(Controller *controller) : InputConvertNormal(
     connect(m_ctrlSteerWheel.delayData.timer, &QTimer::timeout, this, &InputConvertGame::onSteerWheelTimer);
 }
 
-InputConvertGame::~InputConvertGame() {}
+InputConvertGame::~InputConvertGame()
+{
+    releaseAllTouches();
+}
 
 void InputConvertGame::mouseEvent(const QMouseEvent *from, const QSize &frameSize, const QSize &showSize)
 {
@@ -58,7 +79,7 @@ void InputConvertGame::wheelEvent(const QWheelEvent *from, const QSize &frameSiz
 void InputConvertGame::keyEvent(const QKeyEvent *from, const QSize &frameSize, const QSize &showSize)
 {
     // 处理开关按键
-    if (m_keyMap.isSwitchOnKeyboard() && m_keyMap.getSwitchKey() == from->key()) {
+    if (m_keyMap.isSwitchOnKeyboard() && keyMatchesSwitch(from, m_keyMap.getSwitchKey())) {
         if (QEvent::KeyPress != from->type()) {
             return;
         }
@@ -142,6 +163,7 @@ bool InputConvertGame::isCurrentCustomKeymap()
 
 void InputConvertGame::loadKeyMap(const QString &json)
 {
+    releaseAllTouches();
     m_keyMap.loadKeyMap(json);
 }
 
@@ -149,10 +171,8 @@ void InputConvertGame::updateSize(const QSize &frameSize, const QSize &showSize)
 {
     if (showSize != m_showSize) {
         if (m_gameMap && m_keyMap.isValidMouseMoveMap()) {
-#ifdef QT_NO_DEBUG
             // show size change, resize grab cursor
             emit grabCursor(true);
-#endif
         }
     }
     m_frameSize = frameSize;
@@ -177,7 +197,9 @@ void InputConvertGame::sendTouchUpEvent(int id, QPointF pos)
 void InputConvertGame::sendTouchEvent(int id, QPointF pos, AndroidMotioneventAction action)
 {
     if (0 > id || MULTI_TOUCH_MAX_NUM - 1 < id) {
-        Q_ASSERT(0);
+        return;
+    }
+    if (m_frameSize.isEmpty()) {
         return;
     }
     //qDebug() << "id:" << id << " pos:" << pos << " action" << action;
@@ -202,6 +224,62 @@ void InputConvertGame::sendTouchEvent(int id, QPointF pos, AndroidMotioneventAct
         QRect(absolutePos, m_frameSize),
         AMOTION_EVENT_ACTION_DOWN == action ? 1.0f : 0.0f);
     sendControlMsg(controlMsg);
+}
+
+void InputConvertGame::releaseAllTouches()
+{
+    if (m_ctrlSteerWheel.delayData.timer) {
+        m_ctrlSteerWheel.delayData.timer->stop();
+        m_ctrlSteerWheel.delayData.queuePos.clear();
+        m_ctrlSteerWheel.delayData.queueTimer.clear();
+        m_ctrlSteerWheel.delayData.pressedNum = 0;
+    }
+
+    stopMouseMoveTimer();
+
+    if (m_dragDelayData.timer) {
+        m_dragDelayData.timer->stop();
+        delete m_dragDelayData.timer;
+        m_dragDelayData.timer = nullptr;
+        m_dragDelayData.queuePos.clear();
+        m_dragDelayData.queueTimer.clear();
+    }
+
+    QPointF fallbackPos(0.5, 0.5);
+    for (int id = 0; id < MULTI_TOUCH_MAX_NUM; ++id) {
+        int key = m_multiTouchID[id];
+        if (0 == key) {
+            continue;
+        }
+
+        QPointF upPos = fallbackPos;
+        if (key == m_ctrlSteerWheel.touchKey && !m_ctrlSteerWheel.delayData.currentPos.isNull()) {
+            upPos = m_ctrlSteerWheel.delayData.currentPos;
+        } else if (key == Qt::ExtraButton24 && !m_ctrlMouseMove.lastConverPos.isNull()) {
+            upPos = m_ctrlMouseMove.lastConverPos;
+        } else if (key == m_dragDelayData.pressKey && !m_dragDelayData.currentPos.isNull()) {
+            upPos = m_dragDelayData.currentPos;
+        }
+
+        sendTouchUpEvent(id, upPos);
+        m_multiTouchID[id] = 0;
+    }
+
+    m_ctrlSteerWheel.touchKey = Qt::Key_unknown;
+    m_ctrlSteerWheel.pressedUp = false;
+    m_ctrlSteerWheel.pressedDown = false;
+    m_ctrlSteerWheel.pressedLeft = false;
+    m_ctrlSteerWheel.pressedRight = false;
+    m_ctrlSteerWheel.delayData.currentPos = QPointF();
+
+    m_ctrlMouseMove.touching = false;
+    m_ctrlMouseMove.lastConverPos = QPointF();
+    m_ctrlMouseMove.lastPos = QPointF(0.0, 0.0);
+    m_ctrlMouseMove.smallEyes = false;
+    m_ctrlMouseMove.ignoreCount = 0;
+
+    m_dragDelayData.currentPos = QPointF();
+    m_dragDelayData.pressKey = 0;
 }
 
 void InputConvertGame::sendKeyEvent(AndroidKeyeventAction action, AndroidKeycode keyCode) {
@@ -697,22 +775,19 @@ void InputConvertGame::stopMouseMoveTimer()
 
 bool InputConvertGame::switchGameMap()
 {
+    if (m_gameMap) {
+        releaseAllTouches();
+    }
     m_gameMap = !m_gameMap;
     qInfo() << QString("current keymap mode: %1").arg(m_gameMap ? "custom" : "normal");
 
     if (!m_keyMap.isValidMouseMoveMap()) {
         return m_gameMap;
     }
-#ifdef QT_NO_DEBUG
+
     // grab cursor and set cursor only mouse move map
     emit grabCursor(m_gameMap);
-#endif
     hideMouseCursor(m_gameMap);
-
-    if (!m_gameMap) {
-        stopMouseMoveTimer();
-        mouseMoveStopTouch();
-    }
 
     return m_gameMap;
 }

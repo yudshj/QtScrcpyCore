@@ -96,6 +96,7 @@ public:
     virtual void mouseEvent(const QMouseEvent *from, const QSize &frameSize, const QSize &showSize) = 0;
     virtual void wheelEvent(const QWheelEvent *from, const QSize &frameSize, const QSize &showSize) = 0;
     virtual void keyEvent(const QKeyEvent *from, const QSize &frameSize, const QSize &showSize) = 0;
+    virtual void releaseAllTouches() = 0;
 
     virtual void postGoBack() = 0;
     virtual void postGoHome() = 0;

@@ -305,6 +305,7 @@ void Device::disconnectDevice()
     if (!m_server) {
         return;
     }
+    releaseAllTouches();
     m_server->stop();
     m_server = Q_NULLPTR;
 
@@ -592,6 +593,13 @@ void Device::keyEvent(const QKeyEvent *from, const QSize &frameSize, const QSize
 
     for (const auto& item : m_deviceObservers) {
         item->keyEvent(from, frameSize, showSize);
+    }
+}
+
+void Device::releaseAllTouches()
+{
+    if (m_controller) {
+        m_controller->releaseAllTouches();
     }
 }
 

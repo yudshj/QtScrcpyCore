@@ -15,10 +15,11 @@ public:
     InputConvertGame(Controller *controller);
     virtual ~InputConvertGame();
 
-    virtual void mouseEvent(const QMouseEvent *from, const QSize &frameSize, const QSize &showSize);
-    virtual void wheelEvent(const QWheelEvent *from, const QSize &frameSize, const QSize &showSize);
-    virtual void keyEvent(const QKeyEvent *from, const QSize &frameSize, const QSize &showSize);
-    virtual bool isCurrentCustomKeymap();
+    void mouseEvent(const QMouseEvent *from, const QSize &frameSize, const QSize &showSize) override;
+    void wheelEvent(const QWheelEvent *from, const QSize &frameSize, const QSize &showSize) override;
+    void keyEvent(const QKeyEvent *from, const QSize &frameSize, const QSize &showSize) override;
+    void releaseAllTouches() override;
+    bool isCurrentCustomKeymap() override;
 
     void loadKeyMap(const QString &json);
 
@@ -71,7 +72,7 @@ protected:
                        QQueue<QPointF>& queuePos, QQueue<quint32>& queueTimer);
 
 protected:
-    void timerEvent(QTimerEvent *event);
+    void timerEvent(QTimerEvent *event) override;
 
 private slots:
     void onSteerWheelTimer();

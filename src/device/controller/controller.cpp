@@ -17,7 +17,10 @@ Controller::Controller(std::function<qint64(const QByteArray&)> sendData, QStrin
     updateScript(gameScript);
 }
 
-Controller::~Controller() {}
+Controller::~Controller()
+{
+    releaseAllTouches();
+}
 
 void Controller::postControlMsg(ControlMsg *controlMsg)
 {
@@ -46,6 +49,7 @@ void Controller::test(QRect rc)
 void Controller::updateScript(QString gameScript)
 {
     if (m_inputConvert) {
+        m_inputConvert->releaseAllTouches();
         delete m_inputConvert;
     }
     if (!gameScript.isEmpty()) {
@@ -218,6 +222,13 @@ void Controller::keyEvent(const QKeyEvent *from, const QSize &frameSize, const Q
 {
     if (m_inputConvert) {
         m_inputConvert->keyEvent(from, frameSize, showSize);
+    }
+}
+
+void Controller::releaseAllTouches()
+{
+    if (m_inputConvert) {
+        m_inputConvert->releaseAllTouches();
     }
 }
 
